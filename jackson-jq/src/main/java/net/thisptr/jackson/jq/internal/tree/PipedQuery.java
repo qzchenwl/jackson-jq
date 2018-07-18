@@ -1,16 +1,16 @@
 package net.thisptr.jackson.jq.internal.tree;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Stack;
-
 import com.fasterxml.jackson.databind.JsonNode;
-
 import net.thisptr.jackson.jq.JsonQuery;
 import net.thisptr.jackson.jq.Scope;
 import net.thisptr.jackson.jq.exception.JsonQueryException;
+import net.thisptr.jackson.jq.internal.misc.Functional;
 import net.thisptr.jackson.jq.internal.misc.Pair;
 import net.thisptr.jackson.jq.internal.tree.matcher.PatternMatcher;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Stack;
 
 public class PipedQuery extends JsonQuery {
 	private List<Pair<JsonQuery, PatternMatcher>> qs;
@@ -42,14 +42,15 @@ public class PipedQuery extends JsonQuery {
 		for (final JsonNode o : q.apply(scope, in)) {
 			if (matcher != null) {
 				final Stack<Pair<String, JsonNode>> accumulate = new Stack<>();
-				matcher.match(scope, o, (final List<Pair<String, JsonNode>> vars) -> {
-					// Set values in reverse order since if there is the variable name crash,
-					// jq only uses the first match.
-					for (int i = vars.size() - 1; i >= 0; --i) {
-						final Pair<String, JsonNode> var = vars.get(i);
-						scope2.setValue(var._1, var._2);
+				matcher.match(scope, o, new Functional.Consumer<List<Pair<String, JsonNode>>>() {
+					@Override
+					public void accept(List<Pair<String, JsonNode>> vars) throws JsonQueryException {
+						for (int i = vars.size() - 1; i >= 0; --i) {
+							final Pair<String, JsonNode> var = vars.get(i);
+							scope2.setValue(var._1, var._2);
+						}
+						applyRecursive(scope2, in, out, qs.subList(1, qs.size()));
 					}
-					applyRecursive(scope2, in, out, qs.subList(1, qs.size()));
 				}, accumulate, true);
 			} else {
 				applyRecursive(scope2, o, out, qs.subList(1, qs.size()));

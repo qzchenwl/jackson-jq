@@ -1,21 +1,10 @@
 package net.thisptr.jackson.jq.internal.functions;
 
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Stack;
-
-import org.joni.Matcher;
-import org.joni.Option;
-import org.joni.Region;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeType;
 import com.fasterxml.jackson.databind.node.NullNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
-
 import net.thisptr.jackson.jq.Function;
 import net.thisptr.jackson.jq.JsonQuery;
 import net.thisptr.jackson.jq.Scope;
@@ -23,6 +12,15 @@ import net.thisptr.jackson.jq.exception.JsonQueryException;
 import net.thisptr.jackson.jq.internal.BuiltinFunction;
 import net.thisptr.jackson.jq.internal.misc.OnigUtils;
 import net.thisptr.jackson.jq.internal.misc.Preconditions;
+import org.joni.Matcher;
+import org.joni.Option;
+import org.joni.Region;
+
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Stack;
 
 @BuiltinFunction("_sub_impl/3")
 public class _SubImplFunction implements Function {
@@ -67,7 +65,7 @@ public class _SubImplFunction implements Function {
 	}
 
 	private static void concat(final List<JsonNode> out, final List<List<JsonNode>> values) {
-		concat(out, 0, new Stack<>(), values);
+		concat(out, 0, new Stack<JsonNode>(), values);
 	}
 
 	private static List<List<JsonNode>> sub(final Scope scope, final OnigUtils.Pattern pattern, final String inputText, final JsonQuery replace) throws JsonQueryException {
@@ -80,7 +78,7 @@ public class _SubImplFunction implements Function {
 			if (m.search(offset, inputBytes.length, Option.NONE) < 0)
 				break;
 
-			result.add(Collections.singletonList(TextNode.valueOf(new String(inputBytes, offset, m.getBegin() - offset, StandardCharsets.UTF_8))));
+			result.add(Collections.singletonList((JsonNode) TextNode.valueOf(new String(inputBytes, offset, m.getBegin() - offset, StandardCharsets.UTF_8))));
 
 			final ObjectNode captures = scope.getObjectMapper().createObjectNode();
 			final Region regions = m.getRegion();
@@ -103,7 +101,7 @@ public class _SubImplFunction implements Function {
 			offset = m.getEnd();
 		} while (pattern.global && offset != inputBytes.length);
 
-		result.add(Collections.singletonList(TextNode.valueOf(new String(inputBytes, offset, inputBytes.length - offset, StandardCharsets.UTF_8))));
+		result.add(Collections.singletonList((JsonNode) TextNode.valueOf(new String(inputBytes, offset, inputBytes.length - offset, StandardCharsets.UTF_8))));
 		return result;
 	}
 }

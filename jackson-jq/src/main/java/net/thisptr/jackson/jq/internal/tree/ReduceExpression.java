@@ -1,18 +1,18 @@
 package net.thisptr.jackson.jq.internal.tree;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Stack;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.NullNode;
-
 import net.thisptr.jackson.jq.JsonQuery;
 import net.thisptr.jackson.jq.Scope;
 import net.thisptr.jackson.jq.exception.JsonQueryBreakException;
 import net.thisptr.jackson.jq.exception.JsonQueryException;
+import net.thisptr.jackson.jq.internal.misc.Functional;
 import net.thisptr.jackson.jq.internal.misc.Pair;
 import net.thisptr.jackson.jq.internal.tree.matcher.PatternMatcher;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Stack;
 
 public class ReduceExpression extends JsonQuery {
 	private JsonQuery iterExpr;
@@ -44,15 +44,18 @@ public class ReduceExpression extends JsonQuery {
 					final Scope childScope = Scope.newChildScope(scope);
 					for (final JsonNode item : iterExpr.apply(scope, in)) {
 						final Stack<Pair<String, JsonNode>> stack = new Stack<>();
-						matcher.match(scope, item, (final List<Pair<String, JsonNode>> vars) -> {
-							for (int i = vars.size() - 1; i >= 0; --i) {
-								final Pair<String, JsonNode> var = vars.get(i);
-								childScope.setValue(var._1, var._2);
-							}
+						matcher.match(scope, item, new Functional.Consumer<List<Pair<String, JsonNode>>>() {
+							@Override
+							public void accept(List<Pair<String, JsonNode>> vars) throws JsonQueryException {
+								for (int i = vars.size() - 1; i >= 0; --i) {
+									final Pair<String, JsonNode> var = vars.get(i);
+									childScope.setValue(var._1, var._2);
+								}
 
-							// We only use the last value from reduce expression.
-							final List<JsonNode> reduceResult = reduceExpr.apply(childScope, accumulators[0]);
-							accumulators[0] = reduceResult.isEmpty() ? NullNode.getInstance() : reduceResult.get(reduceResult.size() - 1);
+								// We only use the last value from reduce expression.
+								final List<JsonNode> reduceResult = reduceExpr.apply(childScope, accumulators[0]);
+								accumulators[0] = reduceResult.isEmpty() ? NullNode.getInstance() : reduceResult.get(reduceResult.size() - 1);
+							}
 						}, stack, true);
 					}
 

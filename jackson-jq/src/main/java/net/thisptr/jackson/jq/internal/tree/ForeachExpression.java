@@ -1,17 +1,17 @@
 package net.thisptr.jackson.jq.internal.tree;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Stack;
-
 import com.fasterxml.jackson.databind.JsonNode;
-
 import net.thisptr.jackson.jq.JsonQuery;
 import net.thisptr.jackson.jq.Scope;
 import net.thisptr.jackson.jq.exception.JsonQueryBreakException;
 import net.thisptr.jackson.jq.exception.JsonQueryException;
+import net.thisptr.jackson.jq.internal.misc.Functional;
 import net.thisptr.jackson.jq.internal.misc.Pair;
 import net.thisptr.jackson.jq.internal.tree.matcher.PatternMatcher;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Stack;
 
 public class ForeachExpression extends JsonQuery {
 	private JsonQuery iterExpr;
@@ -42,20 +42,23 @@ public class ForeachExpression extends JsonQuery {
 				for (final JsonNode item : iterExpr.apply(scope, in)) {
 
 					final Stack<Pair<String, JsonNode>> stack = new Stack<>();
-					matcher.match(scope, item, (final List<Pair<String, JsonNode>> vars) -> {
-						for (int i = vars.size() - 1; i >= 0; --i) {
-							final Pair<String, JsonNode> var = vars.get(i);
-							childScope.setValue(var._1, var._2);
-						}
-
-						for (final JsonNode newaccumulator : updateExpr.apply(childScope, accumulators[0])) {
-							if (extractExpr != null) {
-								for (final JsonNode extract : extractExpr.apply(childScope, newaccumulator))
-									out.add(extract);
-							} else {
-								out.add(newaccumulator);
+					matcher.match(scope, item, new Functional.Consumer<List<Pair<String, JsonNode>>>() {
+						@Override
+						public void accept(List<Pair<String, JsonNode>> vars) throws JsonQueryException {
+							for (int i = vars.size() - 1; i >= 0; --i) {
+								final Pair<String, JsonNode> var = vars.get(i);
+								childScope.setValue(var._1, var._2);
 							}
-							accumulators[0] = newaccumulator;
+
+							for (final JsonNode newaccumulator : updateExpr.apply(childScope, accumulators[0])) {
+								if (extractExpr != null) {
+									for (final JsonNode extract : extractExpr.apply(childScope, newaccumulator))
+										out.add(extract);
+								} else {
+									out.add(newaccumulator);
+								}
+								accumulators[0] = newaccumulator;
+							}
 						}
 					}, stack, true);
 				}
