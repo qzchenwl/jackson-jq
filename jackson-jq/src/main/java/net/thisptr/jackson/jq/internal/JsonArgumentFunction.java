@@ -1,16 +1,15 @@
 package net.thisptr.jackson.jq.internal;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Stack;
-
 import com.fasterxml.jackson.databind.JsonNode;
-
 import net.thisptr.jackson.jq.Function;
 import net.thisptr.jackson.jq.JsonQuery;
 import net.thisptr.jackson.jq.Scope;
 import net.thisptr.jackson.jq.exception.JsonQueryException;
 import net.thisptr.jackson.jq.internal.misc.Functional;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Stack;
 
 public abstract class JsonArgumentFunction implements Function {
 	protected abstract JsonNode fn(final List<JsonNode> args, final JsonNode in) throws JsonQueryException;
@@ -35,7 +34,12 @@ public abstract class JsonArgumentFunction implements Function {
 			_args.add(arg.apply(scope, in));
 
 		final List<JsonNode> out = new ArrayList<>();
-		combinations(o -> out.add(o), new Stack<>(), 0, _args, in);
+		combinations(new Functional.Consumer<JsonNode>() {
+			@Override
+			public void accept(JsonNode value) throws JsonQueryException {
+				out.add(value);
+			}
+		}, new Stack<JsonNode>(), 0, _args, in);
 		return out;
 	}
 }
